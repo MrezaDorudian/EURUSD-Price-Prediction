@@ -61,7 +61,6 @@ class DataClassifier:
         self.data = None
         self.changing_percentage = None
         self.classified_data = None
-
         self.prepare_data(file_name)
         self.divide_into_periods()
 
@@ -79,8 +78,7 @@ class DataClassifier:
         No return.
         """
         data = pd.read_csv(f'{file_name}.csv')
-        data['Date'] = pd.to_datetime(data['Date'])
-        self.data = data.set_index('Date')
+        self.data = data
         pass
 
     def divide_into_periods(self):
@@ -120,7 +118,7 @@ class DataClassifier:
         for i in range(5):
             minimum_change += changing_percentage[i]
             classes.append(minimum_change)
-        self.changing_percentage = changing_percentage
+        self.changing_percentage = classes
 
         y_axis = []
         for element in percentage:
@@ -130,3 +128,5 @@ class DataClassifier:
                     break
         self.classified_data = self.data[:-30].copy()
         self.classified_data['Class'] = y_axis
+        pass
+    pass
