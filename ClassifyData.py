@@ -64,7 +64,6 @@ class DataClassifier:
 
         self.prepare_data(file_name)
         self.divide_into_periods()
-        self.classify_data()
 
     def prepare_data(self, file_name):
         """
@@ -98,44 +97,36 @@ class DataClassifier:
         -------
         No return.
         """
-        closing_price = np.sort(self.data['Close'], kind='quicksort')
-        chunk_size = round(len(closing_price) / self.CLASS_NUMBERS)
-        divided_data = [closing_price[i: i + chunk_size] for i in range(0, len(closing_price), chunk_size)]
-        changing_percentage = [0]
+        closing_price = self.data['Close'].values
+        percentage = []
+        for i in range(0, len(closing_price) - 30):
+            percentage.append(((closing_price[i + 30] / closing_price[i]) - 1) * 100)
+
+        new_percentage = np.sort(percentage, kind='quicksort')
+
+        chunk_size = round(len(new_percentage) / self.CLASS_NUMBERS)
+        divided_data = [new_percentage[i: i + chunk_size] for i in range(0, len(new_percentage), chunk_size)]
+
+        changing_percentage = []
         for i in range(self.CLASS_NUMBERS):
             if i == 0:
-                changing_percentage.append(((divided_data[i][-1] / divided_data[i][0]) - 1) * 100)
+                changing_percentage.append(divided_data[i][-1] - divided_data[i][0])
             else:
-                changing_percentage.append((((divided_data[i][-1] / divided_data[i - 1][-1]) - 1) * 100))
+                changing_percentage.append(divided_data[i][-1] - divided_data[i - 1][-1])
+        maximum_change = max(percentage)
+        minimum_change = min(percentage)
 
-        # calculate cumulative percentage
-        for i in range(1, len(changing_percentage)):
-            changing_percentage[i] += changing_percentage[i - 1]
-        changing_percentage[-1] = (((closing_price[-1] / closing_price[0]) - 1) * 100)
+        classes = [minimum_change]
+        for i in range(5):
+            minimum_change += changing_percentage[i]
+            classes.append(minimum_change)
         self.changing_percentage = changing_percentage
-        pass
 
-    def classify_data(self):
-        """
-        Iterate the data, and check where
-        we should put the data based on the
-        changing percentage that we calculated
-        and set a number for each data as class.
-        Parameters
-        ----------
-        No parameter.
-        Returns
-        -------
-        No return.
-        """
         y_axis = []
-        for data in range(len(self.data)):
-            current_changing_percentage = (self.data['Close'][data] / min(self.data['Close']) - 1) * 100
-            for index in range(self.CLASS_NUMBERS):
-                if self.changing_percentage[index] <= current_changing_percentage <= self.changing_percentage[index + 1]:
-                    y_axis.append(index)
+        for element in percentage:
+            for i in range(len(classes)):
+                if classes[i] <= element <= classes[i + 1]:
+                    y_axis.append(i)
                     break
-
-        self.classified_data = self.data
+        self.classified_data = self.data[:-30].copy()
         self.classified_data['Class'] = y_axis
-        pass
