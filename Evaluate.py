@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Evaluate:
-    def __init__(self, model, history, changing_percentage, x_train, y_train, x_test, y_test, total_data, time_step):
+    def __init__(self, model, history, changing_percentage, x_train, y_train, x_test, y_test, total_data, learning_ratio, time_step):
         self.model = model
         self.history = history
         self.changing_percentage = changing_percentage
@@ -12,6 +12,7 @@ class Evaluate:
         self.x_test = x_test
         self.y_test = y_test
         self.total_data = total_data
+        self.learning_ratio = learning_ratio
         self.time_step = time_step
         self.train_loss = None
         self.train_accuracy = None
@@ -20,11 +21,6 @@ class Evaluate:
         self.train_class_accuracy = None
         self.test_class_accuracy = None
         pass
-
-    def calculate_changing(self, class_number):
-        for i in range(len(self.changing_percentage) - 1):
-            if class_number == i:
-                return [self.changing_percentage[i], self.changing_percentage[i + 1]]
 
     def show_accuracy(self):
         plt.plot(self.history.history['accuracy'], label='train accuracy', color='red')
@@ -54,48 +50,60 @@ class Evaluate:
         labels = ['Class 0', 'Class 1', 'Class 2', 'Class 3', 'Class 4']
         train = self.train_class_accuracy
         test = self.test_class_accuracy
-
         x = np.arange(len(labels))
-        width = 0.35  # the width of the bars
-
+        width = 0.35
         fig, ax = plt.subplots()
-        rects1 = ax.bar(x - width / 2, train, width, label='Training set')
-        rects2 = ax.bar(x + width / 2, test, width, label='Testing set')
-
-        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.bar(x - width / 2, train, width, label='Training set')
+        ax.bar(x + width / 2, test, width, label='Testing set')
         ax.set_ylabel('Accuracy(%)')
         ax.set_title('Accuracy by Training and Testing set')
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.legend()
-
         fig.tight_layout()
-
         plt.show()
 
-    def prediction(self):
-        predicted = np.argmax(self.model.predict(self.x_train[0:1]))
-        actual = self.y_train[0]
-        print(predicted, actual)
-        starting, ending = self.calculate_changing(predicted)
-        print(f'Price in the next 30 mins will change between {round(starting, 5)}% to {round(ending, 5)}% from now.')
-        change = (((self.total_data.iloc[61]['Close'] / self.total_data.iloc[31]['Close']) - 1) * 100)
-        print(f'actual change is: {round(change, 5)}')
+    def show_info(self):
+        print(f'class 1: between {round(self.changing_percentage[0], 5)}% to {round(self.changing_percentage[1], 5)}%.')
+        print(f'class 2: between {round(self.changing_percentage[1], 5)}% to {round(self.changing_percentage[2], 5)}%.')
+        print(f'class 3: between {round(self.changing_percentage[2], 5)}% to {round(self.changing_percentage[3], 5)}%.')
+        print(f'class 4: between {round(self.changing_percentage[3], 5)}% to {round(self.changing_percentage[4], 5)}%.')
+        print(f'class 5: between {round(self.changing_percentage[4], 5)}% to {round(self.changing_percentage[5], 5)}%.')
+        pass
 
+    def find_peak(self, data_index):
+        all_period = self.x_test[data_index - 30 + 1:data_index + 1]
+        prediction = self.model.predict(all_period)
+        predicted_labels = []
+        for candle in prediction:
+            predicted_labels.append(np.argmax(candle))
+        peak_class = max(predicted_labels)
+        valley_class = min(predicted_labels)
+        max_output = []
+        min_output = []
+        for i in range(len(predicted_labels)):
+            if predicted_labels[i] == peak_class:
+                max_output.append(i + 1)
+            if predicted_labels[i] == valley_class:
+                min_output.append(i + 1)
+        print(f'Peak will probably occur in {max_output[len(max_output) // 2]} minutes from now, and will change between {round(self.changing_percentage[peak_class], 5)}% and {round(self.changing_percentage[peak_class + 1], 5)}%.')
+        print(max_output)
+        print(f'Valley will probably occur in {min_output[len(min_output) // 2]} minutes from now, and will change between {round(self.changing_percentage[valley_class], 5)}% and {round(self.changing_percentage[valley_class + 1], 5)}%.')
+        print(min_output)
+        print(f'Price will probably change {round(self.changing_percentage[predicted_labels[-1]], 5)}% to {round(self.changing_percentage[predicted_labels[-1] + 1], 5)}% in 30 minutes from now.')
+        dataframe = self.total_data.iloc[int(np.ceil(self.learning_ratio * len(self.total_data))):]
+        print(dataframe['Close'].iloc[data_index:data_index + 30].values)
+        plt.plot(dataframe['Close'].iloc[data_index:data_index + 30].values)
+        plt.show()
 
     def run(self):
         self.train_loss, self.train_accuracy = self.model.evaluate(self.x_train, self.y_train, verbose=0)
         self.test_loss, self.test_accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
-        self.show_accuracy()
         self.train_class_accuracy = self.calculate_accuracy_for_each_class(self.x_train, self.y_train)
         self.test_class_accuracy = self.calculate_accuracy_for_each_class(self.x_test, self.y_test)
+
+        self.show_accuracy()
         self.show_class_accuracy()
-        additional_info = f"""
-        class 0: between {self.changing_percentage[0]} to {self.changing_percentage[1]}.
-        class 1: between {self.changing_percentage[1]} to {self.changing_percentage[2]}.
-        class 2: between {self.changing_percentage[2]} to {self.changing_percentage[3]}.
-        class 3: between {self.changing_percentage[3]} to {self.changing_percentage[4]}.
-        class 4: between {self.changing_percentage[4]} to {self.changing_percentage[5]}.
-        """
-        print(additional_info)
+        self.show_info()
+        self.find_peak(1566)
 
