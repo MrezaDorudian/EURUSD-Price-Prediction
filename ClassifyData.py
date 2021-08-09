@@ -14,6 +14,9 @@ class DataClassifier:
     file_name : str, default=''
         Name of the data file without it's extension
         e.g. 'eurusd-data'.
+    future_step: int
+        A number indicating that how many
+        further candle we want to predict.
     Attributes
     ----------
     CLASS_NUMBERS : int
@@ -45,7 +48,7 @@ class DataClassifier:
     """
     CLASS_NUMBERS = 5
 
-    def __init__(self, file_name):
+    def __init__(self, file_name, future_step, method):
         """
         Initialize fields and then call methods to
         fill them with calculated values.
@@ -54,15 +57,29 @@ class DataClassifier:
         file_name : str
             A string indicating the data file
             without it's extension.
+        data: list or ndarray of shape (n, )
+            A variable to store the dataset.
+        changing_percentage: list
+            The prediction will be between
+            two elements of changing_percentage.
+        classified_data:
+        future_step: int
+            A number indicating that how many
+            further candle we want to predict.
+
         Returns
         -------
         No return.
         """
+        self.future_step = future_step
         self.data = None
         self.changing_percentage = None
         self.classified_data = None
         self.prepare_data(file_name)
-        self.divide_into_periods()
+        if method == 1:
+            self.classify_data_first_method()
+        else:
+            self.classify_data_second_method()
 
     def prepare_data(self, file_name):
         """
@@ -81,7 +98,7 @@ class DataClassifier:
         self.data = data
         pass
 
-    def divide_into_periods(self):
+    def classify_data_first_method(self):
         """
         Find the changing_percentages form
         the given data and the output is
@@ -97,8 +114,8 @@ class DataClassifier:
         """
         closing_price = self.data['Close'].values
         percentage = []
-        for i in range(0, len(closing_price) - 30):
-            percentage.append(((closing_price[i + 30] / closing_price[i]) - 1) * 100)
+        for i in range(0, len(closing_price) - self.future_step):
+            percentage.append(((closing_price[i + self.future_step] / closing_price[i]) - 1) * 100)
 
         new_percentage = np.sort(percentage, kind='quicksort')
 
@@ -111,7 +128,7 @@ class DataClassifier:
                 changing_percentage.append(divided_data[i][-1] - divided_data[i][0])
             else:
                 changing_percentage.append(divided_data[i][-1] - divided_data[i - 1][-1])
-        maximum_change = max(percentage)
+
         minimum_change = min(percentage)
 
         classes = [minimum_change]
@@ -126,7 +143,45 @@ class DataClassifier:
                 if classes[i] <= element <= classes[i + 1]:
                     y_axis.append(i)
                     break
-        self.classified_data = self.data[:-30].copy()
+        self.classified_data = self.data[:-self.future_step].copy()
+        self.classified_data['Class'] = y_axis
+        pass
+
+    def classify_data_second_method(self):
+        """
+        Find the changing_percentages form
+        the given data and the output is
+        the percentages that each of our
+        data should be in between 2 of
+        each percentages.
+        Parameters
+        ----------
+        No parameter.
+        Returns
+        -------
+        No return.
+        """
+        closing_price = self.data['Close'].values
+        percentage = []
+        for i in range(0, len(closing_price) - self.future_step):
+            percentage.append(((closing_price[i + self.future_step] / closing_price[i]) - 1) * 100)
+
+        minimum_change = min(percentage)
+        change = (max(percentage) - min(percentage)) / 5
+
+        classes = [minimum_change]
+        for i in range(5):
+            minimum_change += change
+            classes.append(minimum_change)
+        self.changing_percentage = classes
+
+        y_axis = []
+        for element in percentage:
+            for i in range(len(classes)):
+                if classes[i] <= element <= classes[i + 1]:
+                    y_axis.append(i)
+                    break
+        self.classified_data = self.data[:-self.future_step].copy()
         self.classified_data['Class'] = y_axis
         pass
     pass

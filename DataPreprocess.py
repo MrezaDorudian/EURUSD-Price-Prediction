@@ -1,19 +1,22 @@
 import numpy as np
-from ClassifyData import DataClassifier
 from sklearn.preprocessing import MinMaxScaler
+from ClassifyData import DataClassifier
 
 
 class Data:
 
-    def __init__(self, file_name='fixed_EURUSD', learning_ratio=0.8, shuffle=False, time_step=10):
+    def __init__(self, file_name='fixed_EURUSD', learning_ratio=0.8, shuffle=False, time_step=30, method=1):
         self.file_name = file_name
         self.learning_ratio = learning_ratio
         self.shuffle = shuffle
         self.time_step = time_step
-        self.scale_data = MinMaxScaler(feature_range=(-1, 1))
-        self.total_data = None
+        self.method = method
+        self.scale_data = MinMaxScaler(feature_range=(0, 1))
         self.learning_data = None
         self.testing_data = None
+        self.total_dataset = None
+        self.training_dataset = None
+        self.testing_dataset = None
         self.changing_percentage = []
         self.prepare_data()
         pass
@@ -41,6 +44,7 @@ class Data:
 
         x_training = np.reshape(x_training, (x_training.shape[0], x_training.shape[1], 1))
         x_testing = np.reshape(x_testing, (x_testing.shape[0], x_testing.shape[1], 1))
+
         if self.shuffle:
             index = np.random.permutation(len(x_training))
             x_training, y_training = x_training[index], y_training[index]
@@ -49,13 +53,15 @@ class Data:
         pass
 
     def prepare_data(self):
-        data_classifier = DataClassifier(self.file_name)
+        data_classifier = DataClassifier(self.file_name, 30, self.method)
         data = data_classifier.classified_data
-        self.total_data = data
         self.changing_percentage = data_classifier.changing_percentage
 
         dataset_train = data.iloc[:int(np.ceil(self.learning_ratio * len(data)))]
         dataset_test = data.iloc[int(np.ceil(self.learning_ratio * len(data))):]
+        self.total_dataset = data
+        self.training_dataset = dataset_train
+        self.testing_dataset = dataset_test
 
         train = dataset_train['Class'].values
         test = dataset_test['Class'].values
