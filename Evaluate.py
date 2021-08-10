@@ -1,5 +1,6 @@
 import matplotlib.pylab as plt
 import numpy as np
+from sklearn import metrics
 
 
 class Evaluate:
@@ -22,6 +23,7 @@ class Evaluate:
         plt.ylabel('Accuracy(%)')
         plt.legend()
         plt.show()
+
 
     def calculate_accuracy_for_each_class(self, x, y):
         predicted = self.model.predict(x)
@@ -77,6 +79,9 @@ class Evaluate:
         pass
 
     def predict(self, dataset, x, y, data_index):
+
+
+
         dataset = dataset[30:]
         past_time = dataset.iloc[data_index - 30 + 1]['Date']
         past_price = dataset.iloc[data_index - 30 + 1]['Close']
@@ -110,6 +115,10 @@ class Evaluate:
         self.show_info(maximum_upcoming_min, predicted_labels[-1], actual_change, actual_class, plot_data, peak_class)
 
     def run(self, x_train, y_train, x_test, y_test, testing_dataset, scale_data):
+        y_pred = self.model.predict(x_test).argmax(axis=1)
+        print(metrics.classification_report(y_test, y_pred, labels=np.array([0, 1, 2, 3, 4])))
+
+
         self.train_loss, self.train_accuracy = self.model.evaluate(x_train, y_train, verbose=0)
         self.test_loss, self.test_accuracy = self.model.evaluate(x_test, y_test, verbose=0)
         self.train_class_accuracy = self.calculate_accuracy_for_each_class(x_train, y_train)
@@ -117,6 +126,7 @@ class Evaluate:
         self.show_accuracy()
         self.show_class_accuracy()
         self.show_changing_percentage()
-        for i in range(2500, 2530):
-            self.predict(testing_dataset, x_test, y_test, i)
-
+        print(metrics.confusion_matrix(y_test, y_pred))
+        # for i in range(2500, 2530):
+        #     self.predict(testing_dataset, x_test, y_test, i)
+        #

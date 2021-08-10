@@ -72,14 +72,20 @@ class DataClassifier:
         No return.
         """
         self.future_step = future_step
+
         self.data = None
         self.changing_percentage = None
         self.classified_data = None
         self.prepare_data(file_name)
         if method == 1:
             self.classify_data_first_method()
-        else:
+        elif method == 2:
             self.classify_data_second_method()
+        elif method == 3:
+            self.classify_data_third_method()
+        elif method == 4:
+            self.classify_data_forth_method()
+
 
     def prepare_data(self, file_name):
         """
@@ -184,4 +190,80 @@ class DataClassifier:
         self.classified_data = self.data[:-self.future_step].copy()
         self.classified_data['Class'] = y_axis
         pass
+
+    def classify_data_third_method(self):
+        closing_price = self.data['Close'].values
+        percentage = []
+        for i in range(0, len(closing_price) - self.future_step):
+            percentage.append(((max(closing_price[i:i + self.future_step]) / closing_price[i]) - 1) * 100)
+
+        new_percentage = np.sort(percentage, kind='quicksort')
+
+        chunk_size = round(len(new_percentage) / self.CLASS_NUMBERS)
+        divided_data = [new_percentage[i: i + chunk_size] for i in range(0, len(new_percentage), chunk_size)]
+
+        changing_percentage = []
+        for i in range(self.CLASS_NUMBERS):
+            if i == 0:
+                changing_percentage.append(divided_data[i][-1] - divided_data[i][0])
+            else:
+                changing_percentage.append(divided_data[i][-1] - divided_data[i - 1][-1])
+
+        minimum_change = min(percentage)
+
+        classes = [minimum_change]
+        for i in range(5):
+            minimum_change += changing_percentage[i]
+            classes.append(minimum_change)
+        self.changing_percentage = classes
+
+        y_axis = []
+        for element in percentage:
+            for i in range(len(classes)):
+                if classes[i] <= element <= classes[i + 1]:
+                    y_axis.append(i)
+                    break
+        self.classified_data = self.data[:-self.future_step].copy()
+        self.classified_data['Class'] = y_axis
+        with open('asd.txt', 'w') as f:
+            f.write(str(y_axis))
+
+    def classify_data_forth_method(self):
+        closing_price = self.data['Close'].values
+        percentage = []
+        for i in range(0, len(closing_price) - self.future_step):
+            percentage.append(((min(closing_price[i:i + self.future_step]) / closing_price[i]) - 1) * 100)
+
+        new_percentage = np.sort(percentage, kind='quicksort')
+
+        chunk_size = round(len(new_percentage) / self.CLASS_NUMBERS)
+        divided_data = [new_percentage[i: i + chunk_size] for i in range(0, len(new_percentage), chunk_size)]
+
+        changing_percentage = []
+        for i in range(self.CLASS_NUMBERS):
+            if i == 0:
+                changing_percentage.append(divided_data[i][-1] - divided_data[i][0])
+            else:
+                changing_percentage.append(divided_data[i][-1] - divided_data[i - 1][-1])
+
+        minimum_change = min(percentage)
+
+        classes = [minimum_change]
+        for i in range(5):
+            minimum_change += changing_percentage[i]
+            classes.append(minimum_change)
+        self.changing_percentage = classes
+
+        y_axis = []
+        for element in percentage:
+            for i in range(len(classes)):
+                if classes[i] <= element <= classes[i + 1]:
+                    y_axis.append(i)
+                    break
+        self.classified_data = self.data[:-self.future_step].copy()
+        self.classified_data['Class'] = y_axis
+        with open('asd.txt', 'w') as f:
+            f.write(str(y_axis))
+
+
     pass
