@@ -6,7 +6,7 @@ Logistic regression seems not working well and randomly classifying the data wit
 RNN is doing much better about 70% accuracy and could be increased with hyper-parameter tuning.
 
 # Built With
-It's built with pure python and tensorflow and keras.
+It's built with pure python, tensorflow and, keras.
 
 # Contributing
 Feel free to contribute :)
